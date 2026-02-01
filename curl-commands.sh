@@ -4,39 +4,39 @@
 curl -sS "http://localhost:8080/health"
 
 # List products
-curl -sS "http://localhost:8080/api/produk"
+curl -sS "http://localhost:8080/api/products"
 
 # Create product
-curl -sS -X POST "http://localhost:8080/api/produk" \
+curl -sS -X POST "http://localhost:8080/api/products" \
   -H "Content-Type: application/json" \
   -d '{"name":"Teh Botol","price":8000,"stock":30}'
 
 # Get product by ID
-curl -sS "http://localhost:8080/api/produk/1"
+curl -sS "http://localhost:8080/api/products/1"
 
 # Update product by ID
-curl -sS -X PUT "http://localhost:8080/api/produk/1" \
+curl -sS -X PUT "http://localhost:8080/api/products/1" \
   -H "Content-Type: application/json" \
   -d '{"name":"Teh Botol Sosro","price":9000,"stock":25}'
 
 # Delete product by ID
-curl -sS -X DELETE "http://localhost:8080/api/produk/1"
+curl -sS -X DELETE "http://localhost:8080/api/products/1"
 
 # List categories
-curl -sS "http://localhost:8080/categories"
+curl -sS "http://localhost:8080/api/categories"
 
 # Create category
-curl -sS -X POST "http://localhost:8080/categories" \
+curl -sS -X POST "http://localhost:8080/api/categories" \
   -H "Content-Type: application/json" \
   -d '{"name":"Peralatan Rumah","description":"Peralatan rumah tangga."}'
 
 # Get category by ID
-curl -sS "http://localhost:8080/categories/1"
+curl -sS "http://localhost:8080/api/categories/1"
 
 # Update category by ID
-curl -sS -X PUT "http://localhost:8080/categories/1" \
+curl -sS -X PUT "http://localhost:8080/api/categories/1" \
   -H "Content-Type: application/json" \
   -d '{"name":"Peralatan Dapur","description":"Alat masak dan peralatan dapur."}'
 
 # Delete category by ID
-curl -sS -X DELETE "http://localhost:8080/categories/1"
+curl -sS -X DELETE "http://localhost:8080/api/categories/1"
