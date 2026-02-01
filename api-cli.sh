@@ -14,6 +14,16 @@ PROD_URL="https://kasir-api-production-7cb2.up.railway.app"
 # Current selections
 BASE_URL=""
 
+# fzf configuration
+FZF_OPTS=(
+    --border
+    --height 40%
+    --layout=reverse
+    --prompt="➤ "
+    --header=" "
+    --info=inline
+)
+
 print_header() {
     echo -e "${BLUE}=================================${NC}"
     echo -e "${BLUE}    Kasir API Test CLI${NC}"
@@ -24,81 +34,81 @@ print_header() {
 select_environment() {
     print_header
     echo -e "${YELLOW}Select Environment:${NC}"
-    echo "1) Local ($LOCAL_URL)"
-    echo "2) Production ($PROD_URL)"
-    echo ""
-    read -p "Choose [1-2]: " env_choice
     
-    case $env_choice in
-        1)
-            BASE_URL=$LOCAL_URL
-            echo -e "${GREEN}✓ Selected: Local${NC}"
-            ;;
-        2)
-            BASE_URL=$PROD_URL
-            echo -e "${GREEN}✓ Selected: Production${NC}"
-            ;;
-        *)
-            echo -e "${RED}Invalid choice. Defaulting to Local.${NC}"
-            BASE_URL=$LOCAL_URL
-            ;;
-    esac
+    choice=$(echo -e "Local ($LOCAL_URL)\nProduction ($PROD_URL)" | fzf "${FZF_OPTS[@]}" --header "Select Environment")
+    
+    if [[ $choice == *"Local"* ]]; then
+        BASE_URL=$LOCAL_URL
+        echo -e "${GREEN}✓ Selected: Local${NC}"
+    elif [[ $choice == *"Production"* ]]; then
+        BASE_URL=$PROD_URL
+        echo -e "${GREEN}✓ Selected: Production${NC}"
+    else
+        echo -e "${RED}✗ Cancelled${NC}"
+        return 1
+    fi
     echo ""
+    sleep 1
 }
 
 select_resource() {
     print_header
-    echo -e "${YELLOW}Select Resource:${NC}"
-    echo "1) Products"
-    echo "2) Categories"
-    echo "3) Health Check"
+    echo -e "${YELLOW}Current Environment:${NC} $BASE_URL"
     echo ""
-    read -p "Choose [1-3]: " res_choice
     
-    case $res_choice in
-        1)
+    choice=$(echo -e "Products\nCategories\nHealth Check\nChange Environment\nExit" | fzf "${FZF_OPTS[@]}" --header "Select Resource")
+    
+    case $choice in
+        "Products")
             select_product_method
             ;;
-        2)
+        "Categories")
             select_category_method
             ;;
-        3)
+        "Health Check")
             health_check
             ;;
+        "Change Environment")
+            select_environment
+            ;;
+        "Exit")
+            echo -e "${GREEN}Goodbye!${NC}"
+            exit 0
+            ;;
         *)
-            echo -e "${RED}Invalid choice${NC}"
+            echo -e "${RED}✗ Cancelled${NC}"
+            sleep 1
             ;;
     esac
 }
 
 select_product_method() {
-    print_header
-    echo -e "${YELLOW}Select Product Method:${NC}"
-    echo "1) GET  - List all products"
-    echo "2) GET  - Get product by ID"
-    echo "3) POST - Create product"
-    echo "4) PUT  - Update product"
-    echo "5) DELETE - Delete product"
-    echo "0) Back"
-    echo ""
-    read -p "Choose [0-5]: " method_choice
+    choice=$(echo -e "GET - List all products\nGET - Get product by ID\nPOST - Create product\nPUT - Update product\nDELETE - Delete product\nBack" | fzf "${FZF_OPTS[@]}" --header "Select Product Method")
     
-    case $method_choice in
-        1)
+    case $choice in
+        *"List all"*)
             echo -e "\n${GREEN}GET $BASE_URL/api/products${NC}"
             curl -sS "$BASE_URL/api/products" | jq '.' 2>/dev/null || curl -sS "$BASE_URL/api/products"
             echo ""
             ;;
-        2)
-            read -p "Enter Product ID: " product_id
-            echo -e "\n${GREEN}GET $BASE_URL/api/products/$product_id${NC}"
-            curl -sS "$BASE_URL/api/products/$product_id" | jq '.' 2>/dev/null || curl -sS "$BASE_URL/api/products/$product_id"
-            echo ""
+        *"Get product by ID"*)
+            product_id=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Product ID" | tail -1)
+            if [ -n "$product_id" ]; then
+                echo -e "\n${GREEN}GET $BASE_URL/api/products/$product_id${NC}"
+                curl -sS "$BASE_URL/api/products/$product_id" | jq '.' 2>/dev/null || curl -sS "$BASE_URL/api/products/$product_id"
+                echo ""
+            else
+                echo -e "${RED}✗ Cancelled${NC}"
+            fi
             ;;
-        3)
-            read -p "Enter Product Name: " name
-            read -p "Enter Price: " price
-            read -p "Enter Stock: " stock
+        *"Create product"*)
+            name=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Product Name" | tail -1)
+            [ -z "$name" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            price=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Price" | tail -1)
+            [ -z "$price" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            stock=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Stock" | tail -1)
+            [ -z "$stock" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            
             echo -e "\n${GREEN}POST $BASE_URL/api/products${NC}"
             curl -sS -X POST "$BASE_URL/api/products" \
               -H "Content-Type: application/json" \
@@ -107,11 +117,16 @@ select_product_method() {
               -d "{\"name\":\"$name\",\"price\":$price,\"stock\":$stock}"
             echo ""
             ;;
-        4)
-            read -p "Enter Product ID: " product_id
-            read -p "Enter Product Name: " name
-            read -p "Enter Price: " price
-            read -p "Enter Stock: " stock
+        *"Update product"*)
+            product_id=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Product ID" | tail -1)
+            [ -z "$product_id" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            name=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Product Name" | tail -1)
+            [ -z "$name" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            price=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Price" | tail -1)
+            [ -z "$price" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            stock=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Stock" | tail -1)
+            [ -z "$stock" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            
             echo -e "\n${GREEN}PUT $BASE_URL/api/products/$product_id${NC}"
             curl -sS -X PUT "$BASE_URL/api/products/$product_id" \
               -H "Content-Type: application/json" \
@@ -120,51 +135,54 @@ select_product_method() {
               -d "{\"name\":\"$name\",\"price\":$price,\"stock\":$stock}"
             echo ""
             ;;
-        5)
-            read -p "Enter Product ID: " product_id
-            echo -e "\n${GREEN}DELETE $BASE_URL/api/products/$product_id${NC}"
-            curl -sS -X DELETE "$BASE_URL/api/products/$product_id" | jq '.' 2>/dev/null || curl -sS -X DELETE "$BASE_URL/api/products/$product_id"
-            echo ""
+        *"Delete product"*)
+            product_id=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Product ID" | tail -1)
+            if [ -n "$product_id" ]; then
+                echo -e "\n${GREEN}DELETE $BASE_URL/api/products/$product_id${NC}"
+                curl -sS -X DELETE "$BASE_URL/api/products/$product_id" | jq '.' 2>/dev/null || curl -sS -X DELETE "$BASE_URL/api/products/$product_id"
+                echo ""
+            else
+                echo -e "${RED}✗ Cancelled${NC}"
+            fi
             ;;
-        0)
+        "Back")
             return
             ;;
         *)
-            echo -e "${RED}Invalid choice${NC}"
+            echo -e "${RED}✗ Cancelled${NC}"
             ;;
     esac
     
     echo ""
-    read -p "Press Enter to continue..."
+    echo "Press any key to continue..."
+    read -n 1
 }
 
 select_category_method() {
-    print_header
-    echo -e "${YELLOW}Select Category Method:${NC}"
-    echo "1) GET  - List all categories"
-    echo "2) GET  - Get category by ID"
-    echo "3) POST - Create category"
-    echo "4) PUT  - Update category"
-    echo "5) DELETE - Delete category"
-    echo "0) Back"
-    echo ""
-    read -p "Choose [0-5]: " method_choice
+    choice=$(echo -e "GET - List all categories\nGET - Get category by ID\nPOST - Create category\nPUT - Update category\nDELETE - Delete category\nBack" | fzf "${FZF_OPTS[@]}" --header "Select Category Method")
     
-    case $method_choice in
-        1)
+    case $choice in
+        *"List all"*)
             echo -e "\n${GREEN}GET $BASE_URL/api/categories${NC}"
             curl -sS "$BASE_URL/api/categories" | jq '.' 2>/dev/null || curl -sS "$BASE_URL/api/categories"
             echo ""
             ;;
-        2)
-            read -p "Enter Category ID: " category_id
-            echo -e "\n${GREEN}GET $BASE_URL/api/categories/$category_id${NC}"
-            curl -sS "$BASE_URL/api/categories/$category_id" | jq '.' 2>/dev/null || curl -sS "$BASE_URL/api/categories/$category_id"
-            echo ""
+        *"Get category by ID"*)
+            category_id=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Category ID" | tail -1)
+            if [ -n "$category_id" ]; then
+                echo -e "\n${GREEN}GET $BASE_URL/api/categories/$category_id${NC}"
+                curl -sS "$BASE_URL/api/categories/$category_id" | jq '.' 2>/dev/null || curl -sS "$BASE_URL/api/categories/$category_id"
+                echo ""
+            else
+                echo -e "${RED}✗ Cancelled${NC}"
+            fi
             ;;
-        3)
-            read -p "Enter Category Name: " name
-            read -p "Enter Description: " description
+        *"Create category"*)
+            name=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Category Name" | tail -1)
+            [ -z "$name" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            description=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Description" | tail -1)
+            [ -z "$description" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            
             echo -e "\n${GREEN}POST $BASE_URL/api/categories${NC}"
             curl -sS -X POST "$BASE_URL/api/categories" \
               -H "Content-Type: application/json" \
@@ -173,10 +191,14 @@ select_category_method() {
               -d "{\"name\":\"$name\",\"description\":\"$description\"}"
             echo ""
             ;;
-        4)
-            read -p "Enter Category ID: " category_id
-            read -p "Enter Category Name: " name
-            read -p "Enter Description: " description
+        *"Update category"*)
+            category_id=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Category ID" | tail -1)
+            [ -z "$category_id" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            name=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Category Name" | tail -1)
+            [ -z "$name" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            description=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Description" | tail -1)
+            [ -z "$description" ] && echo -e "${RED}✗ Cancelled${NC}" && return
+            
             echo -e "\n${GREEN}PUT $BASE_URL/api/categories/$category_id${NC}"
             curl -sS -X PUT "$BASE_URL/api/categories/$category_id" \
               -H "Content-Type: application/json" \
@@ -185,66 +207,40 @@ select_category_method() {
               -d "{\"name\":\"$name\",\"description\":\"$description\"}"
             echo ""
             ;;
-        5)
-            read -p "Enter Category ID: " category_id
-            echo -e "\n${GREEN}DELETE $BASE_URL/api/categories/$category_id${NC}"
-            curl -sS -X DELETE "$BASE_URL/api/categories/$category_id" | jq '.' 2>/dev/null || curl -sS -X DELETE "$BASE_URL/api/categories/$category_id"
-            echo ""
+        *"Delete category"*)
+            category_id=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter Category ID" | tail -1)
+            if [ -n "$category_id" ]; then
+                echo -e "\n${GREEN}DELETE $BASE_URL/api/categories/$category_id${NC}"
+                curl -sS -X DELETE "$BASE_URL/api/categories/$category_id" | jq '.' 2>/dev/null || curl -sS -X DELETE "$BASE_URL/api/categories/$category_id"
+                echo ""
+            else
+                echo -e "${RED}✗ Cancelled${NC}"
+            fi
             ;;
-        0)
+        "Back")
             return
             ;;
         *)
-            echo -e "${RED}Invalid choice${NC}"
+            echo -e "${RED}✗ Cancelled${NC}"
             ;;
     esac
     
     echo ""
-    read -p "Press Enter to continue..."
+    echo "Press any key to continue..."
+    read -n 1
 }
 
 health_check() {
     echo -e "\n${GREEN}GET $BASE_URL/health${NC}"
     curl -sS "$BASE_URL/health" | jq '.' 2>/dev/null || curl -sS "$BASE_URL/health"
     echo ""
-    read -p "Press Enter to continue..."
+    echo "Press any key to continue..."
+    read -n 1
 }
 
 # Main loop
 select_environment
 
 while true; do
-    print_header
-    echo -e "${YELLOW}Current Environment:${NC} $BASE_URL"
-    echo -e "${YELLOW}Select Resource:${NC}"
-    echo "1) Products"
-    echo "2) Categories"
-    echo "3) Health Check"
-    echo "4) Change Environment"
-    echo "0) Exit"
-    echo ""
-    read -p "Choose [0-4]: " main_choice
-    
-    case $main_choice in
-        1)
-            select_product_method
-            ;;
-        2)
-            select_category_method
-            ;;
-        3)
-            health_check
-            ;;
-        4)
-            select_environment
-            ;;
-        0)
-            echo -e "${GREEN}Goodbye!${NC}"
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}Invalid choice${NC}"
-            sleep 1
-            ;;
-    esac
+    select_resource
 done
