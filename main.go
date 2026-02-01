@@ -263,6 +263,7 @@ func main() {
 	http.HandleFunc("/api/products/", productHandler.HandleProductByID)
 	http.HandleFunc("/api/categories", categoryHandler.HandleCategories)
 	http.HandleFunc("/api/categories/", categoryHandler.HandleCategoryByID)
+	http.HandleFunc("/health", handlers.NewHealthHandler().HandleHealth)
 
 	addr := "0.0.0.0:" + config.Port
 	fmt.Println("Server is starting on port", config.Port)
