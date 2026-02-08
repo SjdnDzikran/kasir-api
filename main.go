@@ -1,15 +1,15 @@
 package main
 
 import (
-	"os"
 	"fmt"
+	"github.com/spf13/viper"
 	"kasir-api/database"
 	"kasir-api/handlers"
 	"kasir-api/repositories"
 	"kasir-api/services"
 	"net/http"
+	"os"
 	"strings"
-	"github.com/spf13/viper"
 )
 
 // var produk = []models.Product{
@@ -263,6 +263,10 @@ func main() {
 	transactionService := services.NewTransactionService(transactionRepo)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 
+	reportRepo := repositories.NewReportRepository(db)
+	reportService := services.NewReportService(reportRepo)
+	reportHandler := handlers.NewReportHandler(reportService)
+
 	http.HandleFunc("/api/products", productHandler.HandleProducts)
 	http.HandleFunc("/api/products/", productHandler.HandleProductByID)
 
@@ -270,6 +274,8 @@ func main() {
 
 	http.HandleFunc("/api/categories", categoryHandler.HandleCategories)
 	http.HandleFunc("/api/categories/", categoryHandler.HandleCategoryByID)
+
+	http.HandleFunc("/api/report/hari-ini", reportHandler.HandleDailyReport)
 	http.HandleFunc("/health", handlers.NewHealthHandler().HandleHealth)
 
 	addr := "0.0.0.0:" + config.Port
