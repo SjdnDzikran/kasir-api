@@ -56,7 +56,7 @@ select_resource() {
     echo -e "${YELLOW}Current Environment:${NC} $BASE_URL"
     echo ""
     
-    choice=$(echo -e "Products\nCategories\nHealth Check\nChange Environment\nExit" | fzf "${FZF_OPTS[@]}" --header "Select Resource")
+    choice=$(echo -e "Products\nCategories\nTransactions\nHealth Check\nChange Environment\nExit" | fzf "${FZF_OPTS[@]}" --header "Select Resource")
     
     case $choice in
         "Products")
@@ -64,6 +64,9 @@ select_resource() {
             ;;
         "Categories")
             select_category_method
+            ;;
+        "Transactions")
+            select_transaction_method
             ;;
         "Health Check")
             health_check
@@ -216,6 +219,63 @@ select_category_method() {
             else
                 echo -e "${RED}✗ Cancelled${NC}"
             fi
+            ;;
+        "Back")
+            return
+            ;;
+        *)
+            echo -e "${RED}✗ Cancelled${NC}"
+            ;;
+    esac
+    
+    echo ""
+    echo "Press any key to continue..."
+    read -n 1
+}
+
+select_transaction_method() {
+    choice=$(echo -e "POST - Checkout (Create Transaction)\nBack" | fzf "${FZF_OPTS[@]}" --header "Select Transaction Method")
+    
+    case $choice in
+        *"Checkout"*)
+            echo -e "${YELLOW}Enter items for checkout (format: product_id,quantity)${NC}"
+            echo -e "${YELLOW}Press Enter with empty line to finish${NC}"
+            
+            items=()
+            while true; do
+                item_input=$(echo "" | fzf "${FZF_OPTS[@]}" --print-query --header "Enter item (product_id,quantity) or press Enter to finish" | tail -1)
+                
+                if [ -z "$item_input" ]; then
+                    break
+                fi
+                
+                IFS=',' read -r product_id quantity <<< "$item_input"
+                
+                if [ -z "$product_id" ] || [ -z "$quantity" ]; then
+                    echo -e "${RED}✗ Invalid format. Use: product_id,quantity${NC}"
+                    continue
+                fi
+                
+                items+=("{\"product_id\":$product_id,\"quantity\":$quantity}")
+            done
+            
+            if [ ${#items[@]} -eq 0 ]; then
+                echo -e "${RED}✗ No items added. Cancelled.${NC}"
+                return
+            fi
+            
+            # Build JSON array
+            items_json=$(IFS=,; echo "${items[*]}")
+            json_data="{\"items\":[$items_json]}"
+            
+            echo -e "\n${GREEN}POST $BASE_URL/api/checkout${NC}"
+            echo -e "${BLUE}Request:${NC} $json_data"
+            curl -sS -X POST "$BASE_URL/api/checkout" \
+              -H "Content-Type: application/json" \
+              -d "$json_data" | jq '.' 2>/dev/null || curl -sS -X POST "$BASE_URL/api/checkout" \
+              -H "Content-Type: application/json" \
+              -d "$json_data"
+            echo ""
             ;;
         "Back")
             return
