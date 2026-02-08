@@ -56,7 +56,7 @@ select_resource() {
     echo -e "${YELLOW}Current Environment:${NC} $BASE_URL"
     echo ""
     
-    choice=$(echo -e "Products\nCategories\nTransactions\nHealth Check\nChange Environment\nExit" | fzf "${FZF_OPTS[@]}" --header "Select Resource")
+    choice=$(echo -e "Products\nCategories\nTransactions\nReports\nHealth Check\nChange Environment\nExit" | fzf "${FZF_OPTS[@]}" --header "Select Resource")
     
     case $choice in
         "Products")
@@ -67,6 +67,9 @@ select_resource() {
             ;;
         "Transactions")
             select_transaction_method
+            ;;
+        "Reports")
+            select_report_method
             ;;
         "Health Check")
             health_check
@@ -293,6 +296,28 @@ select_transaction_method() {
 health_check() {
     echo -e "\n${GREEN}GET $BASE_URL/health${NC}"
     curl -sS "$BASE_URL/health" | jq '.' 2>/dev/null || curl -sS "$BASE_URL/health"
+    echo ""
+    echo "Press any key to continue..."
+    read -n 1
+}
+
+select_report_method() {
+    choice=$(echo -e "GET - Daily Report (Hari Ini)\nBack" | fzf "${FZF_OPTS[@]}" --header "Select Report Method")
+    
+    case $choice in
+        *"Daily Report"*)
+            echo -e "\n${GREEN}GET $BASE_URL/api/report/hari-ini${NC}"
+            curl -sS "$BASE_URL/api/report/hari-ini" | jq '.' 2>/dev/null || curl -sS "$BASE_URL/api/report/hari-ini"
+            echo ""
+            ;;
+        "Back")
+            return
+            ;;
+        *)
+            echo -e "${RED}✗ Cancelled${NC}"
+            ;;
+    esac
+    
     echo ""
     echo "Press any key to continue..."
     read -n 1
