@@ -2,8 +2,8 @@ package repositories
 
 import (
 	"database/sql"
-	"kasir-api/models"
 	"fmt"
+	"kasir-api/models"
 )
 
 type TransactionRepository struct {
@@ -35,7 +35,7 @@ func (repo *TransactionRepository) CreateTransaction(items []models.CheckoutItem
 		if err != nil {
 			return nil, err
 		}
-  
+
 		subtotal := productPrice * item.Quantity
 		totalAmount += subtotal
 
@@ -60,8 +60,8 @@ func (repo *TransactionRepository) CreateTransaction(items []models.CheckoutItem
 
 	for i := range details {
 		details[i].TransactionID = transactionID
-		_, err = tx.Exec("INSERT INTO transaction_details (transaction_id, product_id, quantity, subtotal) VALUES ($1, $2, $3, $4)",
-			transactionID, details[i].ProductID, details[i].Quantity, details[i].Subtotal)
+		err = tx.QueryRow("INSERT INTO transaction_details (transaction_id, product_id, quantity, subtotal) VALUES ($1, $2, $3, $4) RETURNING id",
+			transactionID, details[i].ProductID, details[i].Quantity, details[i].Subtotal).Scan(&details[i].ID)
 		if err != nil {
 			return nil, err
 		}
